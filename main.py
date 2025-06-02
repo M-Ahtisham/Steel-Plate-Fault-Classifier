@@ -1,4 +1,5 @@
 import os
+import subprocess
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -37,9 +38,39 @@ print(steel_data.describe())
 print(steel_data.head())
 print(steel_data.info())
 
+steel_classes = steel_data[steel_data.columns[-7:]]
+
+# Checks if the data is ordered by classes
+label_series = steel_classes.idxmax(axis=1)
+plt.figure(figsize=(14, 4))
+plt.plot(label_series.reset_index(drop=True), marker='.', linestyle='none')
+plt.title('Class Distribution Over Row Index')
+plt.ylabel('Class')
+plt.xlabel('Row Index')
+plt.xticks(ticks=range(0, len(label_series), 100))
+plt.show()
+
+class_counts = steel_classes.sum()
+
+# Bar plot
+plt.figure(figsize=(10, 6))
+bars = plt.bar(class_counts.index, class_counts.values)
+
+plt.title('Steel Fault Class Distribution')
+plt.xlabel('Fault Class')
+plt.ylabel('Number of Instances')
+
+# Add numbers on top of bars
+for bar in bars:
+    yval = bar.get_height()
+    plt.text(bar.get_x() + bar.get_width()/2, yval + 5, int(yval), 
+             ha='center', va='bottom', fontsize=10)
+
+plt.tight_layout()
+plt.show()
 
 # Randomize the dataset
-steel_data = steel_data.sample(frac=1, random_state=12).reset_index(drop=True)
+# steel_data = steel_data.sample(frac=1, random_state=12).reset_index(drop=True)
 
 # Separate features and targets
 # Assuming the last few columns are fault types (binary targets)
@@ -55,7 +86,6 @@ print("Test features shape:", X_test.shape)
 print("Train labels shape:", y_train.shape)
 print("Test labels shape:", y_test.shape)
 
-# Step 1: Standardize (fit on train, transform both)
 scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
@@ -83,3 +113,4 @@ plt.show()
 
 # Step 7: Output
 print(f"Average of diagonal (mean class-wise accuracy): {avg_diag:.4f}")
+
