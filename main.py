@@ -38,6 +38,9 @@ print(steel_data.describe())
 print(steel_data.head())
 print(steel_data.info())
 
+# # Randomize the dataset
+# steel_data = steel_data.sample(frac=1, random_state=12).reset_index(drop=True)
+
 steel_classes = steel_data[steel_data.columns[-7:]]
 
 # Checks if the data is ordered by classes
@@ -69,8 +72,6 @@ for bar in bars:
 plt.tight_layout()
 plt.show()
 
-# Randomize the dataset
-# steel_data = steel_data.sample(frac=1, random_state=12).reset_index(drop=True)
 
 # Separate features and targets
 # Assuming the last few columns are fault types (binary targets)
@@ -90,27 +91,95 @@ scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
 
-# Step 2: Train KNN
-knn = KNeighborsClassifier(n_neighbors=5)
-knn.fit(X_train_scaled, y_train)
+# for k in range(1,10):
+#     # Step 2: Train KNN
+#     knn = KNeighborsClassifier(n_neighbors=k)
+#     knn.fit(X_train_scaled, y_train)
 
-# Step 3: Predict
-y_pred = knn.predict(X_test_scaled)
+#     # Step 3: Predict
+#     y_pred = knn.predict(X_test_scaled)
 
-# Step 4: Convert one-hot to class labels
-y_test_labels = np.argmax(y_test, axis=1)
-y_pred_labels = np.argmax(y_pred, axis=1)
+#     # Step 4: Convert one-hot to class labels
+#     y_test_labels = np.argmax(y_test, axis=1)
+#     y_pred_labels = np.argmax(y_pred, axis=1)
 
-# Step 5: Confusion Matrix
-conf_matrix = confusion_matrix(y_test_labels, y_pred_labels, normalize='true')
-avg_diag = np.trace(conf_matrix) / conf_matrix.shape[0]
+#     # Step 5: Confusion Matrix
+#     conf_matrix = confusion_matrix(y_test_labels, y_pred_labels, normalize='true')
+#     avg_diag = np.trace(conf_matrix) / conf_matrix.shape[0]
+    
+#     # Step 6: Output
+#     print(f"Average of diagonal (mean class-wise accuracy) for KNN with k = {k}: {avg_diag:.4f}")
+    
 
-# Step 6: Plot
-disp = ConfusionMatrixDisplay(confusion_matrix=conf_matrix)
-disp.plot(cmap='Blues', xticks_rotation=45)
-plt.title("Relative Confusion Matrix for KNN Classifier")
-plt.show()
+# # Step 7: Plot
 
-# Step 7: Output
-print(f"Average of diagonal (mean class-wise accuracy): {avg_diag:.4f}")
+# print("After iterating through the values of K, the best ones is 5")
 
+# disp = ConfusionMatrixDisplay(confusion_matrix=conf_matrix)
+# disp.plot(cmap='Blues', xticks_rotation=45)
+# plt.title(f"Relative Confusion Matrix for KNN Classifier for {k}")
+# plt.show()
+
+    
+
+def trainAndTest(selected_features):
+    X_train, X_test, y_train, y_test = train_test_split(X[selected_features], y, test_size=0.3, random_state=23)
+    
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+    
+    # Step 2: Train KNN
+    knn = KNeighborsClassifier(n_neighbors=5)
+    knn.fit(X_train_scaled, y_train)
+    
+
+    # Step 3: Predict
+    y_pred = knn.predict(X_test_scaled)
+
+    # Step 4: Convert one-hot to class labels
+    y_test_labels = np.argmax(y_test, axis=1)
+    y_pred_labels = np.argmax(y_pred, axis=1)
+
+    # Step 5: Confusion Matrix
+    conf_matrix = confusion_matrix(y_test_labels, y_pred_labels, normalize='true')
+    avg_diag = np.trace(conf_matrix) / conf_matrix.shape[0]
+    
+    # Format the output with fixed width for alignment
+    features_str = str(selected_features).ljust(200)  # Adjust 40 based on your longest feature list
+    print(f"Features: {features_str} Accuracy: {avg_diag:>7.4f}")  # Right-aligned with 4 decimal places
+    
+    return avg_diag
+
+
+def forward_feature_selection(all_features, MAXF):
+    selected = []
+    selected_last_iter = []
+    c_rate_best = None
+    
+    while len(selected) < MAXF:
+        selected_last_iter = selected.copy()
+        c_rate = [0] * len(all_features)
+        
+        for i, feature in enumerate(all_features):
+            if feature not in selected:
+                selected_temp = selected + [feature]
+                c_rate[i] = trainAndTest(selected_temp)
+        
+        x_best_addition = c_rate.index(max(c_rate))
+        
+        if c_rate[x_best_addition] > (c_rate_best if c_rate_best is not None else -1):
+            selected.append(all_features[x_best_addition])
+            c_rate_best = c_rate[x_best_addition]
+        else:
+            break
+    
+    return selected
+
+
+# Example list of features (replace with your actual features)
+all_features = list(X)
+MAXF = 8  # Maximum number of features to select
+
+selected_features = forward_feature_selection(all_features, MAXF)
+print("Selected features:", selected_features)
