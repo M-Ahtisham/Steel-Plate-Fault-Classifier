@@ -77,52 +77,10 @@ plt.show()
 # Assuming the last few columns are fault types (binary targets)
 X = steel_data.iloc[:, :-7]  # adjust depending on actual target columns
 y = steel_data.iloc[:, -7:]  # 7 target fault types
-
-# Perform train-test split (e.g., 80% train, 20% test)
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=23)
-
-# Check shapes
-print("Train features shape:", X_train.shape)
-print("Test features shape:", X_test.shape)
-print("Train labels shape:", y_train.shape)
-print("Test labels shape:", y_test.shape)
-
-scaler = StandardScaler()
-X_train_scaled = scaler.fit_transform(X_train)
-X_test_scaled = scaler.transform(X_test)
-
-# for k in range(1,10):
-#     # Step 2: Train KNN
-#     knn = KNeighborsClassifier(n_neighbors=k)
-#     knn.fit(X_train_scaled, y_train)
-
-#     # Step 3: Predict
-#     y_pred = knn.predict(X_test_scaled)
-
-#     # Step 4: Convert one-hot to class labels
-#     y_test_labels = np.argmax(y_test, axis=1)
-#     y_pred_labels = np.argmax(y_pred, axis=1)
-
-#     # Step 5: Confusion Matrix
-#     conf_matrix = confusion_matrix(y_test_labels, y_pred_labels, normalize='true')
-#     avg_diag = np.trace(conf_matrix) / conf_matrix.shape[0]
     
-#     # Step 6: Output
-#     print(f"Average of diagonal (mean class-wise accuracy) for KNN with k = {k}: {avg_diag:.4f}")
     
-
-# # Step 7: Plot
-
-# print("After iterating through the values of K, the best ones is 5")
-
-# disp = ConfusionMatrixDisplay(confusion_matrix=conf_matrix)
-# disp.plot(cmap='Blues', xticks_rotation=45)
-# plt.title(f"Relative Confusion Matrix for KNN Classifier for {k}")
-# plt.show()
-
-    
-
-def trainAndTest(selected_features):
+# Tests different sets of features and checks the accuracy on the KNN Classifier 
+def trainAndTest(selected_features): 
     X_train, X_test, y_train, y_test = train_test_split(X[selected_features], y, test_size=0.3, random_state=23)
     
     scaler = StandardScaler()
@@ -133,7 +91,6 @@ def trainAndTest(selected_features):
     knn = KNeighborsClassifier(n_neighbors=5)
     knn.fit(X_train_scaled, y_train)
     
-
     # Step 3: Predict
     y_pred = knn.predict(X_test_scaled)
 
@@ -146,7 +103,7 @@ def trainAndTest(selected_features):
     avg_diag = np.trace(conf_matrix) / conf_matrix.shape[0]
     
     # Format the output with fixed width for alignment
-    features_str = str(selected_features).ljust(200)  # Adjust 40 based on your longest feature list
+    features_str = str(selected_features).ljust(150)  # Adjust 40 based on your longest feature list
     print(f"Features: {features_str} Accuracy: {avg_diag:>7.4f}")  # Right-aligned with 4 decimal places
     
     return avg_diag
@@ -179,7 +136,76 @@ def forward_feature_selection(all_features, MAXF):
 
 # Example list of features (replace with your actual features)
 all_features = list(X)
-MAXF = 8  # Maximum number of features to select
+MAXF = 5  # Maximum number of features to select
 
 selected_features = forward_feature_selection(all_features, MAXF)
 print("Selected features:", selected_features)
+
+X = steel_data[list(selected_features)]
+
+# Perform train-test split (e.g., 80% train, 20% test)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=23)
+
+# Check shapes
+print("Train features shape:", X_train.shape)
+print("Test features shape:", X_test.shape)
+print("Train labels shape:", y_train.shape)
+print("Test labels shape:", y_test.shape)
+
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+bestK = 0
+bestAcc = 0.0
+    
+for k in range(1,10):
+    # Step 2: Train KNN
+    knn = KNeighborsClassifier(n_neighbors=k)
+    knn.fit(X_train_scaled, y_train)
+    
+    # Step 3: Predict
+    y_pred = knn.predict(X_test_scaled)
+
+    # Step 4: Convert one-hot to class labels
+    y_test_labels = np.argmax(y_test, axis=1)
+    y_pred_labels = np.argmax(y_pred, axis=1)
+
+    # Step 5: Confusion Matrix
+    conf_matrix = confusion_matrix(y_test_labels, y_pred_labels, normalize='true')
+    avg_diag = np.trace(conf_matrix) / conf_matrix.shape[0]
+    
+    # Step 6: Output
+    print(f"Average of diagonal (mean class-wise accuracy) for KNN with k = {k}: {avg_diag:.4f}")
+    
+    if avg_diag > bestAcc:
+        bestK, bestAcc = k, avg_diag
+
+    
+# Step 7: Plot
+
+print("After iterating through the values of K, the best ones is {bestK}")
+
+ # Step 2: Train KNN
+knn = KNeighborsClassifier(n_neighbors=bestK)
+knn.fit(X_train_scaled, y_train)
+
+# Step 3: Predict
+y_pred = knn.predict(X_test_scaled)
+
+# Step 4: Convert one-hot to class labels
+y_test_labels = np.argmax(y_test, axis=1)
+y_pred_labels = np.argmax(y_pred, axis=1)
+
+# Step 5: Confusion Matrix
+conf_matrix = confusion_matrix(y_test_labels, y_pred_labels, normalize='true')
+avg_diag = np.trace(conf_matrix) / conf_matrix.shape[0]
+
+# Step 6: Output
+print(f"Average of diagonal (mean class-wise accuracy) for KNN with k = {bestK}: {avg_diag:.4f}")
+
+
+disp = ConfusionMatrixDisplay(confusion_matrix=conf_matrix)
+disp.plot(cmap='Blues', xticks_rotation=45)
+plt.title(f"Relative Confusion Matrix for KNN Classifier for {bestK}")
+plt.show()
